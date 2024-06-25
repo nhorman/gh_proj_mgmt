@@ -25,3 +25,15 @@ lookup_project() {
     echo $(git config --get ghprojects."$pname".num)
 }
 
+validate_project() {
+    local mypnum=$1
+
+    case $mypnum in
+        ''|*[!0-9]*)
+            echo "Invalid project id for $1"
+            exit 1
+            ;;
+        *)
+            ;;
+    esac
+}

@@ -90,26 +90,12 @@ check_issues() {
 mypnum=$(lookup_project "$1")
 
 #### validate it ####
-case $mypnum in
-    ''|*[!0-9]*)
-        echo "Invalid project id for $1"
-        exit 1
-        ;;
-    *)
-        ;;
-esac
+validate_project $mypnum
 
 mydevnum=$(lookup_project "Development Board")
 
 #### validate it ####
-case $mydevnum in
-    ''|*[!0-9]*)
-        echo "Invalid project id for $1"
-        exit 1
-        ;;
-    *)
-        ;;
-esac
+validate_project $mydevnum
 
 echo "Fetching issues for $1"
 fetch_issues_json $mypnum $TEMPDIR/issues.json
