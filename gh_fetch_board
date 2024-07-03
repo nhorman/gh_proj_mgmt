@@ -5,7 +5,7 @@
 
 fetch_issues_json() {
     local pnum=$1
-    gh project item-list --owner openssl --format json -L 1000 $pnum
+    gh project item-list --owner openssl --format json --jq '.' -L 1000 $pnum | jq .
 }
 
 ##### START #####
@@ -20,6 +20,6 @@ mydevnum=$(lookup_project "Development Board")
 #### validate it ####
 validate_project $mydevnum
 
-echo "Fetching issues for $1"
+echo "Fetching issues for $1" > 2
 fetch_issues_json $mypnum
 
