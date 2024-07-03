@@ -1,0 +1,25 @@
+#!/bin/bash
+
+. ./gh_common.sh
+
+
+fetch_issues_json() {
+    local pnum=$1
+    gh project item-list --owner openssl --format json -L 1000 $pnum
+}
+
+##### START #####
+##### Get the project number #####
+mypnum=$(lookup_project "$1")
+
+#### validate it ####
+validate_project $mypnum
+
+mydevnum=$(lookup_project "Development Board")
+
+#### validate it ####
+validate_project $mydevnum
+
+echo "Fetching issues for $1"
+fetch_issues_json $mypnum
+
