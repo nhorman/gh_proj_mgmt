@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 TEMPDIR=$(mktemp -d /tmp/ghscratch.XXXXXX)
 
 cleanup() {
@@ -24,19 +24,28 @@ eval_issue() {
     local issubepic
     local status
     local iurl
+    local inum
     local check
 
     export idx=$1
-
-    ### Get the issue url
+    ### Get the issue url and number
     export iurl=$(jq -r '.items[$ENV.idx | tonumber].content.url' $TEMPDIR/issues.json)
+    export inum=$(jq -r '.items[$ENV.idx | tonumber].content.number' $TEMPDIR/issues.json)
+
+    if [ -n "$ISSUE" ]
+    then
+        if [ $ISSUE -ne $inum ]
+        then
+            return
+        fi
+    fi
 
     ### get the epic and subepic labels
     isepic=$(jq '.items[$ENV.idx | tonumber].labels | select(index("epic")) | .[]' $TEMPDIR/issues.json)
     issubepic=$(jq '.items[$ENV.idx | tonumber].labels | select(index("subepic")) | .[]' $TEMPDIR/issues.json)
 
     ### get the status of the issue
-    status=$(jq '.items[$ENV.idx | tonumber].status' $TEMPDIR/issues.json)
+    status=$(jq -r '.items[$ENV.idx | tonumber].status' $TEMPDIR/issues.json)
 
     ### If the issue is done, ignore it
     if [ "$status" == "Done" ]
@@ -44,14 +53,17 @@ eval_issue() {
         return
     fi
 
+    ### If the issue is closed, ignore it
+
+
     # Check to ensure no epics are on the development board
-    if [ -z "$isepic" -a -n "$issubepic" ]
+    if [ -n "$isepic" -o -n "$issubepic" ]
     then
-        # This is an epic, should not be on the development board
+        # This is a (sub)epic, should not be on the development board
         check=$(jq '.items[] | select (.content.url == $ENV.iurl)' $TEMPDIR/devboard.json)
         if [ ! -z "$check" ]
         then
-            echo "issue $iurl is an epic, but is on the development board"
+            echo "issue $iurl is a (sub)epic, but is on the development board"
         fi
         return
     fi
