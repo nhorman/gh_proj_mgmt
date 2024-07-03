@@ -20,6 +20,6 @@ mydevnum=$(lookup_project "Development Board")
 #### validate it ####
 validate_project $mydevnum
 
-echo "Fetching issues for $1" > 2
+echo "Fetching issues for $1" >&2
 fetch_issues_json $mypnum
 

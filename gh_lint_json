@@ -2,6 +2,7 @@
 
 . ./gh_common.sh
 
+
 PROJBOARDJSON=$1
 DEVBOARDJSON=$2
 
@@ -16,7 +17,7 @@ eval_issue() {
 
     export idx=$1
     ### Get the issue url and number
-    export iurl=$(jq -r '.items[$ENV.idx | tonumber].content.url' $PROJEBOARDJSON)
+    export iurl=$(jq -r '.items[$ENV.idx | tonumber].content.url' $PROJBOARDJSON)
     export inum=$(jq -r '.items[$ENV.idx | tonumber].content.number' $PROJBOARDJSON)
 
     if [ -n "$ISSUE" ]
@@ -46,11 +47,12 @@ eval_issue() {
     # Check to ensure no epics are on the development board
     if [ -n "$isepic" -o -n "$issubepic" ]
     then
-        # This is a (sub)epic, should not be on the development board
+        # This is a (sub)epic, should only be in the refining state
+        # so we can flesh out tasks, never in todo
         check=$(jq '.items[] | select (.content.url == $ENV.iurl)' $DEVBOARDJSON)
-        if [ ! -z "$check" ]
+        if [ ! -z "$check" -a "$status" != "Refining" ]
         then
-            echo "issue $iurl is a (sub)epic, but is on the development board"
+            echo "issue $iurl is a (sub)epic, but is on the development board in status $status"
         fi
         return
     fi
