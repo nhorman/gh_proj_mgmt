@@ -1,0 +1,99 @@
+#!/bin/bash
+
+. ./gh_common.sh
+
+PROJBOARDJSON=$1
+DEVBOARDJSON=$2
+
+eval_issue() {
+    local idx
+    local isepic
+    local issubepic
+    local status
+    local iurl
+    local inum
+    local check
+
+    export idx=$1
+    ### Get the issue url and number
+    export iurl=$(jq -r '.items[$ENV.idx | tonumber].content.url' $PROJEBOARDJSON)
+    export inum=$(jq -r '.items[$ENV.idx | tonumber].content.number' $PROJBOARDJSON)
+
+    if [ -n "$ISSUE" ]
+    then
+        if [ $ISSUE -ne $inum ]
+        then
+            return
+        fi
+    fi
+
+    ### get the epic and subepic labels
+    isepic=$(jq '.items[$ENV.idx | tonumber].labels | select(index("epic")) | .[]' $PROJBOARDJSON)
+    issubepic=$(jq '.items[$ENV.idx | tonumber].labels | select(index("subepic")) | .[]' $PROJBOARDJSON)
+
+    ### get the status of the issue
+    status=$(jq -r '.items[$ENV.idx | tonumber].status' $PROJBOARDJSON)
+
+    ### If the issue is done, ignore it
+    if [ "$status" == "Done" ]
+    then
+        return
+    fi
+
+    ### If the issue is closed, ignore it
+
+
+    # Check to ensure no epics are on the development board
+    if [ -n "$isepic" -o -n "$issubepic" ]
+    then
+        # This is a (sub)epic, should not be on the development board
+        check=$(jq '.items[] | select (.content.url == $ENV.iurl)' $DEVBOARDJSON)
+        if [ ! -z "$check" ]
+        then
+            echo "issue $iurl is a (sub)epic, but is on the development board"
+        fi
+        return
+    fi
+
+    # Check to ensure no subepics are missing the epic label
+    if [ -z "$isepic" -a -n "$issubepic" ]
+    then
+        echo "issue $iurl is a subepic, but is not also marked as epic"
+        return
+    fi
+
+    # The remaining cases (epic+subepic and regular issues)
+    # Are handled the same way, just make sure they are on the dev board
+
+    check=$(jq '.items[] | select (.content.url == $ENV.iurl)' $DEVBOARDJSON)
+    if [ -z "$check" ]
+    then
+        echo "Issue $iurl is on the project board, but missing from the dev board"
+        return
+   fi
+
+}
+
+check_issues() {
+    local tnum=$(jq '.items | length' $PROJBOARDJSON)
+
+    let tnum=$tnum-1
+    for i in $(seq 0 1 $tnum)
+    do
+        eval_issue $i
+    done
+}
+
+##### START #####
+if [ -z "$PROJBOARDJSON" ]
+then
+    echo "Need to specify a project board json file"
+    exit 1
+fi
+if [ -z "$DEVBOARDJSON" ]
+then
+    echo "Need to specify a development board json file"
+    exit 1
+fi
+
+check_issues

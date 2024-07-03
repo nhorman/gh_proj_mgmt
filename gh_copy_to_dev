@@ -1,0 +1,20 @@
+#!/bin/bash
+
+TEMPDIR=$(mktemp -d /tmp/ghscratch.XXXXXX)
+
+cleanup() {
+    rm -rf $TEMPDIR
+}
+
+trap cleanup EXIT
+
+. ./gh_common.sh
+
+
+### START
+mypnum=$(lookup_project "$1")
+validate_project $mypnum
+
+mydevnum=$(lookup_project "Development Board")
+validate_project $mydevnum
+
