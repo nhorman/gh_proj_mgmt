@@ -1,0 +1,50 @@
+#!/bin/bash
+
+ISSUE_NUM=$1
+REPO=$2
+
+TMPDIR=$(mktemp -d /tmp/clone.XXXXXX)
+
+cleanup() {
+    rm -rf $TMPDIR
+}
+
+trap cleanup EXIT
+
+gh api graphql -F repo=$REPO -F issue=$ISSUE_NUM -f query='
+query($repo:String!, $issue:Int!) {
+    repository(owner:"openssl", name:$repo) {
+        id,
+        issue(number:$issue) {
+            number
+            url
+            title
+            body
+            projectsV2(first:50) {
+                nodes {
+                    id
+                }
+            }
+        }
+    }
+}' > $TMPDIR/source.json
+
+REPO_ID=$(jq '.data.repository.id' $TMPDIR/source.json)
+TITLE=$(jq -r '.data.repository.issue.title' $TMPDIR/source.json)
+BODY=$(jq -r '.data.repository.issue.body' $TMPDIR/source.json)
+PROJECTS=$(jq -j '.data.repository.issue.projectsV2.nodes[]|" ",.id' $TMPDIR/source.json)
+PROJECTS="[$PROJECTS]"
+
+gh api graphql -F title="$TITLE" -F body="$BODY" -F repoid=$REPO_ID -f query='
+mutation($title:String!, $body:String!, $repoid:ID!) {
+    createIssue(input: {
+        repositoryId:$repoid
+        title:$title
+        body:$body
+    }) {
+        issue {
+            url
+        }
+    }
+}'
+
